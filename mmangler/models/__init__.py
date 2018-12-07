@@ -2,7 +2,7 @@
 
 ### IMPORTS ###
 from .base import Base
-from .medias import MediaModel
+from .medias import MediaModel, MediaTypeEnum
 
 ### GLOBALS ###
 
