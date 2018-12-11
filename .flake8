@@ -1,0 +1,14 @@
+[flake8]
+ignore =
+    # too many leading '#' for block comment
+    E266,
+    # expected 2 blank lines, found X
+    E302
+
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    alembic/env.py
+
+max-line-length = 120
