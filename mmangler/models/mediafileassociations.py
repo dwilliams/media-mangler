@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 ### IMPORTS ###
-import datetime
-
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 

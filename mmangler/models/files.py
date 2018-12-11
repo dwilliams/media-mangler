@@ -30,7 +30,3 @@ class FileModel(Base):
     file_type = Column(Enum(FileTypeEnum), nullable=False)
     date_added_to_collection = Column(DateTime, server_default=func.now(), nullable=False)
     medias = relationship("MediaFileAssociationModel", back_populates="file")
-
-# FIXME:
-# Note to self:
-#    After, copy the responder, graphene, etc from the example script to this project.

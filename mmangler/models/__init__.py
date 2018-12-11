@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 ### IMPORTS ###
-from .base import Base
-from .files import FileModel, FileTypeEnum
-from .medias import MediaModel, MediaTypeEnum
-from .mediafileassociations import MediaFileAssociationModel
+from .base import Base  # noqa: F401
+from .files import FileModel, FileTypeEnum  # noqa: F401
+from .medias import MediaModel, MediaTypeEnum  # noqa: F401
+from .mediafileassociations import MediaFileAssociationModel  # noqa: F401
 
 ### GLOBALS ###
 
