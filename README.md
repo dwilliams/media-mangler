@@ -22,3 +22,6 @@ curl https://bootstrap.pypa.io/get-pip.py | python
 ```
 pip install -e .
 ```
+
+Instantiate database with alembic.
+Run the server.

@@ -33,5 +33,4 @@ class FileModel(Base):
 
 # FIXME:
 # Note to self:
-#    Following step is to setup alembic or flyway for versioned DB creation.
 #    After, copy the responder, graphene, etc from the example script to this project.
