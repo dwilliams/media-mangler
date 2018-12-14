@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ### IMPORTS ###
-from marshmallow import Schema, fields, post_dump
+from marshmallow import Schema, fields, post_dump, pre_dump
 
 from mmangler.models import MediaTypeEnum
 
@@ -35,3 +35,13 @@ class MediaSchema(Schema):
         else:
             tmp_data = data
         return tmp_data
+
+    @pre_dump(pass_many=True)
+    def simplist(self, data, many):
+        print("MediaSchema simplist data: {}".format(data))
+        return data
+
+# FIXME:
+# NOTE:
+# - Trying to use the same schema for the lists, which could have large sublists, doesn't seem to be working.
+#   Likely need to use two separate schemas.
