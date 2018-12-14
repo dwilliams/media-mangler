@@ -3,6 +3,7 @@
 ### IMPORTS ###
 from .files import FileSchema  # noqa: F401
 from .medias import MediaSchema  # noqa: F401
+from .mediafileassociations import MediaFileAssociationSchema  # noqa: F401
 
 ### GLOBALS ###
 

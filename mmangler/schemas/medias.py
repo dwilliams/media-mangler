@@ -20,4 +20,4 @@ class MediaSchema(Schema):
     date_added_to_collection = fields.DateTime()
     desc_location = fields.String()
     desc_make_model = fields.String()
-    files = fields.Nested('FileSchema', many=True, exclude=('medias',))
+    files = fields.Nested('MediaFileAssociationSchema', many=True, dump_only=True, exclude=('media','medias'))

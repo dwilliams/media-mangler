@@ -7,6 +7,7 @@ import responder
 import mmangler.models
 import mmangler.schemas
 import mmangler.graph
+import mmangler.restapi
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -23,6 +24,7 @@ mmangler.models.Base.query = db_session.query_property()
 api = responder.API(title="Media Mangler", version="0.0.1", openapi="3.0.0", docs_route="/docs")
 mmangler.schemas.attach_schemas(api)
 mmangler.graph.attach_routes(api)
+mmangler.restapi.attach_routes(api)
 
 ### FUNCTIONS ###
 

@@ -19,4 +19,4 @@ class FileSchema(Schema):
     hash_sha512_hex = fields.String()  # Need to check the length
     file_type = EnumField(FileTypeEnum)
     date_added_to_collection = fields.DateTime()
-    medias = fields.Nested('MediaSchema', many=True, exclude=('files',))
+    medias = fields.Nested('MediaFileAssociationSchema', many=True, dump_only=True, exclude=('file','files'))
