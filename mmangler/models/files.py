@@ -15,11 +15,11 @@ from .base import Base
 
 ### CLASSES ###
 class FileTypeEnum(enum.Enum):
-    other = 1
-    video = 2
-    audio = 3
-    photo = 4
-    text = 5
+    other = 'other'
+    video = 'video'
+    audio = 'audio'
+    photo = 'photo'
+    text = 'text'
 
 class FileModel(Base):
     __tablename__ = 'files'
@@ -27,6 +27,9 @@ class FileModel(Base):
     name = Column(String, nullable=False)
     size_bytes = Column(BigInteger, nullable=False)
     hash_sha512_hex = Column(String(128), nullable=False)
-    file_type = Column(Enum(FileTypeEnum), nullable=False)
+    file_type = Column(
+        Enum(*[name for name, member in FileTypeEnum.__members__.items()], name="filetypeenum"),
+        nullable=False
+    )
     date_added_to_collection = Column(DateTime, server_default=func.now(), nullable=False)
     medias = relationship("MediaFileAssociationModel", back_populates="file")

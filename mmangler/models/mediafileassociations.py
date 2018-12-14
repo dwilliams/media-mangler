@@ -18,4 +18,4 @@ class MediaFileAssociationModel(Base):
     files_id = Column(Integer, ForeignKey('files.id'), primary_key=True)
     date_copied_to_media = Column(DateTime, server_default=func.now(), nullable=False)
     media = relationship("MediaModel", back_populates="files")
-    file = relationship("FilesModel", back_populates="medias")
+    file = relationship("FileModel", back_populates="medias")
