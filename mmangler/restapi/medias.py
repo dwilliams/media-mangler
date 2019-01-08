@@ -49,13 +49,15 @@ class MediasResource:
             tmp_session = mmangler.models.db_session()
             tmp_session.add(tmp_new_media)
             tmp_session.commit()
-            self.logger.debug("Added new media")
+            self.logger.debug("Added new media: %s:%s", tmp_new_media.id, tmp_new_media.name)
+            response.text = json.dumps(tmp_media_schema.dump(tmp_new_media).data)
+            response.status_code = 201
         except MultipleResultsFound:
             # Too many results, so error out
-            resp.status_code = 400
+            response.status_code = 400
         except:
             # Something else is wrong, so bail out
-            resp.status_code = 500
+            response.status_code = 500
 
 class MediaIdResource:
     def on_get(self, request, response, *, media_id):
