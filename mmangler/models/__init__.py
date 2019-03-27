@@ -15,11 +15,11 @@ _session_factory = None
 db_session = None
 
 ### FUNCTIONS ###
-def prepare_db(url):
+def prepare_db(url, echo=False):
     global _engine
     global _session_factory
     global db_session
-    _engine = create_engine(url)
+    _engine = create_engine(url, echo=echo)
     _session_factory = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
     db_session = scoped_session(_session_factory)
 

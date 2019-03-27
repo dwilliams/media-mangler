@@ -30,15 +30,17 @@ class MediasResource:
         self.logger.debug("URL: %s", request.full_url)
         tmp_media_schema = mmangler.schemas.MediaSchema()
         tmp_post_body = await request.media()
-        # load into schema here to validate values
         self.logger.debug("Contents: %s", tmp_post_body)
         try:
+            # Look for name in database
             tmp_db_result = mmangler.models.MediaModel.query.filter_by(name=tmp_post_body['name']).one()
             self.logger.debug("Rows: %s", tmp_db_result)
-            # Look for name in database
-            # If name, check type and capacity
+            # TODO: If name, check type and capacity
             #    if match, return ID
             #    else return error
+            self.logger.debug("Found existing media: %s:%s", tmp_db_result.id, tmp_db_result.name)
+            response.text = json.dumps(tmp_media_schema.dump(tmp_db_result).data)
+            response.status_code = 200
         except NoResultFound:
             # else add to DB and return ID
             tmp_new_media = mmangler.models.MediaModel(

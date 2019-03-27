@@ -3,7 +3,4 @@ SQLAlchemy>=1.1
 graphene>=2.1
 graphene-sqlalchemy>=2.1
 marshmallow>=2.16
-responder>=1.1
-
-# Have to force this version for the time being:
-starlette==0.8
+responder>=1.3
