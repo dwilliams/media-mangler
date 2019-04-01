@@ -39,7 +39,11 @@ class MediasResource:
             #    if match, return ID
             #    else return error
             self.logger.debug("Found existing media: %s:%s", tmp_db_result.id, tmp_db_result.name)
-            response.text = json.dumps(tmp_media_schema.dump(tmp_db_result).data)
+            #response.text = json.dumps(tmp_media_schema.dump(tmp_db_result).data)
+            # Removing file list from result to save transfer
+            tmp_data = tmp_media_schema.dump(tmp_db_result).data
+            tmp_data.pop("files", None)
+            response.text = json.dumps(tmp_data)
             response.status_code = 200
         except NoResultFound:
             # else add to DB and return ID
@@ -52,13 +56,17 @@ class MediasResource:
             tmp_session.add(tmp_new_media)
             tmp_session.commit()
             self.logger.debug("Added new media: %s:%s", tmp_new_media.id, tmp_new_media.name)
-            response.text = json.dumps(tmp_media_schema.dump(tmp_new_media).data)
+            # Removing file list from result to save transfer
+            tmp_data = tmp_media_schema.dump(tmp_new_media).data
+            tmp_data.pop("files", None)
+            response.text = json.dumps(tmp_data)
             response.status_code = 201
         except MultipleResultsFound:
             # Too many results, so error out
             response.status_code = 400
-        except:
+        except Exception as ex:
             # Something else is wrong, so bail out
+            self.logger.debug("Exception: %s", ex)
             response.status_code = 500
 
 class MediaIdResource:
