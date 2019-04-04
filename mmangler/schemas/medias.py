@@ -30,7 +30,8 @@ class MediaSchema(Schema):
                 tmp_data.append({
                     'id': item['id'],
                     'name': item['name'],
-                    'media_type': item['media_type']
+                    'media_type': item['media_type'],
+                    'capacity_bytes': item['capacity_bytes']
                 })
         else:
             tmp_data = data

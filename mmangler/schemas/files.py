@@ -30,7 +30,9 @@ class FileSchema(Schema):
                 tmp_data.append({
                     'id': item['id'],
                     'name': item['name'],
-                    'file_type': item['file_type']
+                    'file_type': item['file_type'],
+                    'size_bytes': item['size_bytes'],
+                    'medias_count': len(item['medias'])
                 })
         else:
             tmp_data = data
