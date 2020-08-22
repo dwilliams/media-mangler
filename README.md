@@ -7,23 +7,20 @@ Commands for development
 ------------------------
 
 1. Setup virtual environment:
+
 ```
 python -m venv venv
 ```
 
-If there's an error involving ensurepip (usually on Windows using Anaconda Python), run the following:
-```
-python -m venv venv --without-pip
-source test/bin/activate
-curl https://bootstrap.pypa.io/get-pip.py | python
-```
+1. Install the required packages:
 
-2. Install the package as editable:
 ```
-pip install -e .
+pip install -r requirements.txt
+pip install -r requirements_test.txt
 ```
 
-Instantiate database with alembic.
+3. Alembic is a pain to use, so just figure out how to run an SQL script...
 
+4. Configure the server.
 
-Run the server.
+5. Run the server.

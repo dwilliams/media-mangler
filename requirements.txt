@@ -3,4 +3,5 @@ SQLAlchemy>=1.1
 graphene>=2.1
 graphene-sqlalchemy>=2.1
 marshmallow>=2.16
+PyMySQL>=0.9
 responder>=1.3
