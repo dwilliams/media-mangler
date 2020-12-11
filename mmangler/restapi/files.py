@@ -7,6 +7,8 @@ import logging
 import mmangler.models
 import mmangler.schemas
 
+from mmangler.exceptions import ConflictException, MultipleResultsException, ServerErrorException
+
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 ### GLOBALS ###
@@ -14,15 +16,6 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 ### FUNCTIONS ###
 
 ### CLASSES ###
-class ConflictException(Exception):
-    pass
-
-class MultipleResultsException(Exception):
-    pass
-
-class ServerErrorException(Exception):
-    pass
-
 class FilesResource:
     def __init__(self, *args, **kwargs):
         self.logger = logging.getLogger(type(self).__name__)
