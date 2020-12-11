@@ -1,0 +1,9 @@
+[MASTER]
+disable=
+  C0114, # missing-module-docstring
+  C0115, # missing-class-docstring
+  C0116, # missing-function-docstring
+  C0326, # bad-whitespace (No space allowed around keyword argument assignment)
+
+[FORMAT]
+max-line-length=120
