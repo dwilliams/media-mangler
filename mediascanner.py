@@ -11,7 +11,8 @@ import os
 import psutil
 import win32api
 
-import magic
+#import magic
+from winmagic import magic
 
 import mmangler.models
 
@@ -20,7 +21,7 @@ from mmangler.exceptions import ConflictException, MultipleResultsException, Ser
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 ### GLOBALS ###
-DB_URL = "mysql+pymysql://root:password@localhost:3306/mediamangler"
+#DB_URL = "mysql+pymysql://root:password@localhost:3306/mediamangler"
 
 ### FUNCTIONS ###
 
@@ -260,6 +261,11 @@ def main():
     parser = argparse.ArgumentParser(description="Scan and hash files on media, then push into the database.")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--dry", help="Dry run, don't push to database.", action="store_true")
+    parser.add_argument("--db_user", default = "root", help="Set the database username.")
+    parser.add_argument("--db_pass", default = "password", help="Set the database password.")
+    parser.add_argument("--db_host", default = "localhost", help="Set the database hostname.")
+    parser.add_argument("--db_port", default = "3306", help="Set the database network port.")
+    parser.add_argument("--db_name", default = "mediamangler", help="Set the database name.")
     parser.add_argument("--media_id", help="ID of media being scanned.  This is to override media discovery.")
     parser.add_argument("--mdiscv_type", help="Override the discovery of the media type.")
     parser.add_argument("media_root", help="Path to the media root to be scanned.  Usually will be a drive letter (e.g. D:\).")
@@ -272,7 +278,9 @@ def main():
     )
 
     logging.debug("Args: %s", args)
-    mmangler.models.prepare_db(DB_URL, echo=False)
+    mmangler.models.prepare_db("mysql+pymysql://{}:{}@{}:{}/{}".format(
+        args.db_user, args.db_pass, args.db_host, args.db_port, args.db_name
+    ), echo=False)
 
     tmp_path = os.path.abspath(args.media_root)
     logging.info("Media Root: %s", tmp_path)

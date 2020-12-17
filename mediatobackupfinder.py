@@ -11,6 +11,8 @@ import os
 
 import mmangler.models
 
+from mmangler.utilities.pathwalker import PathWalker
+
 from mmangler.exceptions import ConflictException, MultipleResultsException, ServerErrorException
 
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -92,7 +94,8 @@ class FileChecker:
 def main():
     parser = argparse.ArgumentParser(description = "Scan a folder and check if backups exist in the database.")
     parser.add_argument("-v", "--verbose", action = "store_true")
-    parser.add_argument("--backup_count", type = int, help = "The number of backups expected.")
+    parser.add_argument("--backup_count", type = int, default = 1, help = "The number of backups expected.")
+    parser.add_argument("--exclude_dirs", help = "Comma separated string of directories to exclude from scan.")
     parser.add_argument("media_dir", help = "Path to the directory containing media to be scanned.")
     args = parser.parse_args()
 
@@ -108,21 +111,27 @@ def main():
     tmp_path = os.path.abspath(args.media_dir)
     logging.info("Media Directory: %s", tmp_path)
 
-    _filename_ignore = [
-        'WPSettings.dat',
-        'IndexerVolumeGuid'
-    ]
+    path_walker = PathWalker(tmp_path, args.exclude_dirs.split(',') if args.exclude_dirs else [])
 
-    tmp_filepath_list = []
-    for dirpath, dirnames, filenames in os.walk(tmp_path):
-        for filename in filenames:
-            if filename not in _filename_ignore:
-                tmp_filepath_list.append(os.path.join(dirpath, filename))
+    # _filename_ignore = [
+    #     'WPSettings.dat',
+    #     'IndexerVolumeGuid',
+    #     '.windows'
+    # ]
+    #
+    # tmp_filepath_list = []
+    # for root, dirs, files in os.walk(tmp_path, topdown = True):
+    #     dirs[:] = [d for d in dirs if d not in args.exclude_dirs.split(',')] # There's probably more processing required
+    #     for filename in files:
+    #         if filename not in _filename_ignore:
+    #             tmp_filepath_list.append(os.path.join(root, filename))
+    #             if len(tmp_filepath_list) % 99 == 0:
+    #                 logging.info("%d files counted so far", len(tmp_filepath_list))
 
     tmp_file_counter = 0
-    for item in tmp_filepath_list:
+    for item in path_walker.files_list:
         tmp_file_counter = tmp_file_counter + 1
-        logging.info("File Number: %d of %d", tmp_file_counter, len(tmp_filepath_list))
+        logging.info("File Number: %d of %d", tmp_file_counter, len(path_walker.files_list))
         FileChecker(file_path = item, backup_count = args.backup_count)
 
 if __name__ == '__main__':

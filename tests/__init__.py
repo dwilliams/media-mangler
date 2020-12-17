@@ -38,6 +38,7 @@ def run_all_tests():
     # Consolidate all suites into one
     suites = []
     suites.extend(build_test_suites("test_*.py"))
+    suites.extend(build_test_suites("utilities/test_*.py"))
     suites.extend(build_test_suites("utilities/binpacker/test_*.py"))
     test_suite = unittest.TestSuite(suites)
     # Run the test suite containing all the tests from all the modules
