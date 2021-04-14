@@ -13,7 +13,8 @@ class PathWalker:
     _filename_ignore = [
         'WPSettings.dat',
         'IndexerVolumeGuid',
-        '.windows'
+        '.windows',
+        'Thumbs.db'
     ]
 
     def __init__(self, root_path, exclude_dirs = [], display_counts = True):

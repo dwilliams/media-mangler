@@ -13,5 +13,8 @@ class ConflictException(Exception):
 class MultipleResultsException(Exception):
     pass
 
+class NotAFileException(Exception):
+    pass
+
 class ServerErrorException(Exception):
     pass
