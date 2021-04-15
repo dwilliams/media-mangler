@@ -3,6 +3,7 @@
 # This scanner will push directly to the database, not to the web server.
 
 ### IMPORTS ###
+import os
 import mmangler.models
 
 ### GLOBALS ###
@@ -14,7 +15,7 @@ DB_URL = "mysql+pymysql://root:password@localhost:3306/mediamangler"
 
 ### MAIN ###
 def main():
-    mmangler.models.prepare_db(DB_URL, echo=True)
+    mmangler.models.prepare_db(os.getenv("PY_DB_URL", DB_URL), echo=True)
 
     try:
         mmangler.models.Base.metadata.create_all(mmangler.models._engine)

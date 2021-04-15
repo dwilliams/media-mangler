@@ -5,6 +5,8 @@ from .base import Base  # noqa: F401
 from .files import FileModel, FileTypeEnum  # noqa: F401
 from .medias import MediaModel, MediaTypeEnum  # noqa: F401
 from .mediafileassociations import MediaFileAssociationModel  # noqa: F401
+from .servershare import ServerShareModel # noqa: F401
+from .serversharefileassociations import ServerShareFileAssociationModel # noqa: F401
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker

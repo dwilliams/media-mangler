@@ -19,6 +19,7 @@ class PathWalker:
 
     def __init__(self, root_path, exclude_dirs = [], display_counts = True):
         self.logger = logging.getLogger(type(self).__name__)
+        # FIXME: Update to use pathlib.Path
         self.root_path = root_path
         self.exclude_dirs = exclude_dirs
         self.display_counts = display_counts
@@ -44,9 +45,10 @@ class PathWalker:
             # if d not in self.exclude_dirs or if os.path.join(root, d) not in self.exclude_dirs
             # dirs[:] = [d for d in dirs if d not in self.exclude_dirs]
             # FIXME: Need to work through the possible options for the exclude_dirs list
-            #        bare directories referenced to root_path
-            #        relative paths referenced to the root_path
-            #        absolute paths (should this be checked to be under the root_path
+            #        - bare directories referenced to root_path
+            #        - relative paths referenced to the root_path
+            #        - absolute paths (should this be checked to be under the root_path
+            #        Might be a good idea to brute force the scan instead of relying on os.walk
             for directory in list(dirs): # Wrapped in list() to make a new list so to not modify the for loop's list
                 self.logger.debug("Checking directory '%s' against list '%s'", directory, self.exclude_dirs)
                 self.logger.debug("Checking directory '%s' against list '%s'", os.path.join(root, directory), self.exclude_dirs)

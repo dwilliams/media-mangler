@@ -43,6 +43,7 @@ class MediaDiscover:
         for x in tmp_disk_parts:
             self.logger.debug("Path: %s (%s)", Path(x.device), x.device)
             self.logger.debug("Match: %s", Path(x.device).resolve() == self.path.resolve())
+        # FIXME: Should this be fixed to support network shares?
         tmp_disk_part = next(x for x in tmp_disk_parts if Path(x.device).resolve() == self.path.resolve())
         if tmp_disk_part.fstype in ["NTFS", "FAT", "FAT32"]:
             self.type = MediaTypeEnum.HDD

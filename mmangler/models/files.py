@@ -39,3 +39,4 @@ class FileModel(Base):
     )
     date_added_to_collection = Column(DateTime, nullable = False, default = datetime.datetime.utcnow)
     medias = relationship("MediaFileAssociationModel", back_populates = "file")
+    servershares = relationship("ServerShareFileAssociationModel", back_populates = "file")

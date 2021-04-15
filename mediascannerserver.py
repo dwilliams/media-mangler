@@ -6,6 +6,7 @@
 import argparse
 import logging
 import os
+import win32api
 
 import mmangler.models
 
@@ -14,7 +15,6 @@ from pathlib import Path
 from mmangler.utilities.pathwalker import PathWalker
 from mmangler.utilities.filehash import FileHash
 from mmangler.utilities.filemime import FileMime
-from mmangler.utilities.mediadiscover import MediaDiscover
 
 from mmangler.exceptions import ConflictException, MultipleResultsException, ServerErrorException
 
@@ -25,59 +25,53 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 ### FUNCTIONS ###
 
 ### CLASSES ###
-class MediaPoster:
-    def __init__(self, media_path):
+class ServerSharePoster:
+    def __init__(self, share_path):
         self.logger = logging.getLogger(type(self).__name__)
-        self.path = Path(media_path)
+        self.path = Path(share_path)
         self.id = None
-        self._media_discoverer = MediaDiscover(self.path)
+        # FIXME: Make this work for both winderps and loonix
+        self.name = win32api.GetVolumeInformation(str(self.path))[0]
+        self.logger.info("Media Label: %s", self.name)
 
     def post_to_db(self):
         self.logger.debug("Post to DB")
         try:
-            # Look for name in database
-            tmp_db_result = mmangler.models.MediaModel.query.filter_by(name=self._media_discoverer.name).one()
+            # Look for share name in database
+            tmp_db_result = mmangler.models.ServerShareModel.query.filter_by(name=self.name).one()
             self.logger.debug("Rows: %s", tmp_db_result)
-            # FIXME: If name, check type and capacity
-            #    if match, return ID
-            #    else return error
             self.logger.debug("Found existing media: %s:%s", tmp_db_result.id, tmp_db_result.name)
             self.id = tmp_db_result.id
         except NoResultFound:
             # else add to DB and return ID
-            tmp_new_media = mmangler.models.MediaModel(
-                name = self._media_discoverer.name,
-                media_type = self._media_discoverer.type.value,
-                capacity_bytes = self._media_discoverer.capacity_bytes
-            )
+            tmp_new_share = mmangler.models.ServerShareModel(name = self.name)
             tmp_session = mmangler.models.db_session()
-            tmp_session.add(tmp_new_media)
+            tmp_session.add(tmp_new_share)
             tmp_session.commit()
-            self.logger.debug("Added new media: %s:%s", tmp_new_media.id, tmp_new_media.name)
-            self.id = tmp_new_media.id
+            self.logger.debug("Added new media: %s:%s", tmp_new_share.id, tmp_new_share.name)
+            self.id = tmp_new_share.id
         except MultipleResultsFound:
             # Too many results, so error out
-            self.logger.error("Too many results for media: name: %s", self._media_discoverer.name)
+            self.logger.error("Too many results for media: name: %s", self.name)
         except Exception as ex:
             # Something else is wrong, so bail out
             self.logger.error("Exception: %s", ex)
 
-class FilePoster:
-    def __init__(self, file_path, media_id):
+class ServerFilePoster:
+    def __init__(self, file_path, share_id):
         self.logger = logging.getLogger(type(self).__name__)
         self.path = Path(file_path)
-        self.media_id = media_id
+        self.share_id = share_id
         self.id = None
-        #self.name = os.path.splitext(os.path.basename(self.path))[0]
         self.name = self.path.stem
         self.size_bytes = os.stat(self.path).st_size
         self._filehash = FileHash(self.path)
         self._filemime = FileMime(self.path)
 
+    # FIXME: Should probably make this lookup the file data from the server on instantiation of this class
     def _insert_file(self, tmp_session):
         try:
             # Look up by hash in database
-            #tmp_db_result = mmangler.models.FileModel.query.filter_by(hash_sha512_hex=tmp_post_body['hash_sha512_hex']).one()
             tmp_db_result = tmp_session.query(mmangler.models.FileModel).filter_by(hash_sha512_hex=self._filehash.hash_sha512_hex).one()
             self.logger.debug("Rows: %s", tmp_db_result)
             # Check if name and size match (check type?)
@@ -112,18 +106,18 @@ class FilePoster:
             self.logger.error("Exception: %s", ex)
             raise ServerErrorException()
 
-    def _insert_mfa(self, tmp_session, tmp_media, tmp_file):
+    def _insert_mfa(self, tmp_session, tmp_share, tmp_file):
         try:
-            tmp_mfa = mmangler.models.MediaFileAssociationModel(
-                medias_id = tmp_media.id,
+            tmp_ssfa = mmangler.models.ServerShareFileAssociationModel(
+                servershares_id = tmp_share.id,
                 file_path = os.path.splitdrive(os.path.dirname(self.path))[1], # grab the path part without the drive letter
                 file_name = os.path.basename(self.path)
             )
-            tmp_file.medias.append(tmp_mfa)
+            tmp_file.servershares.append(tmp_ssfa)
             #with mmangler.models.db_session() as tmp_session:
             tmp_session.add(tmp_file)
             tmp_session.commit()
-            self.logger.debug("Updated file medias: %s:%s", tmp_file.id, tmp_file.metadata_name)
+            self.logger.debug("Updated file servershares: %s:%s", tmp_file.id, tmp_file.metadata_name)
         except Exception as ex:
             # Something else is wrong, so bail out
             self.logger.debug("Exception: %s", ex)
@@ -135,8 +129,8 @@ class FilePoster:
             # Open DB Session
             tmp_session = mmangler.models.db_session()
             # Look up media by id in database
-            tmp_media_result = tmp_session.query(mmangler.models.MediaModel).get(self.media_id)
-            self.logger.debug("Medias: %s", tmp_media_result)
+            tmp_share_result = tmp_session.query(mmangler.models.ServerShareModel).get(self.share_id)
+            self.logger.debug("Server Share: %s", tmp_share_result)
             # Try to insert the file into the database
             if self._insert_file(tmp_session):
                 # File inserted
@@ -146,9 +140,9 @@ class FilePoster:
                 logging.debug("File already there")
             # Try to add the media association
             tmp_file_result = tmp_session.query(mmangler.models.FileModel).filter_by(hash_sha512_hex=self._filehash.hash_sha512_hex).one()
-            self.logger.debug("Resulting file medias: %s", [x.media for x in tmp_file_result.medias])
-            if tmp_media_result not in [x.media for x in tmp_file_result.medias]:
-                self._insert_mfa(tmp_session, tmp_media_result, tmp_file_result)
+            self.logger.debug("Resulting file servershares: %s", [x.servershare for x in tmp_file_result.servershares])
+            if tmp_share_result not in [x.servershare for x in tmp_file_result.servershares]:
+                self._insert_mfa(tmp_session, tmp_share_result, tmp_file_result)
         except NoResultFound as ex:
             # Media not found or File not found after insert
             self.logger.error("NoResultFound: %s", ex)
@@ -179,9 +173,8 @@ def main():
     parser.add_argument("--db_host", default = "localhost", help="Set the database hostname.")
     parser.add_argument("--db_port", default = "3306", help="Set the database network port.")
     parser.add_argument("--db_name", default = "mediamangler", help="Set the database name.")
-    parser.add_argument("--media_id", help="ID of media being scanned.  This is to override media discovery.")
-    parser.add_argument("--mdiscv_type", help="Override the discovery of the media type.")
-    parser.add_argument("media_root", help="Path to the media root to be scanned.  Usually will be a drive letter (e.g. D:\).")
+    parser.add_argument("--share_id", help="ID of share being scanned.  This is to override share discovery.")
+    parser.add_argument("share_root", help="Path to the share root to be scanned.  This will be a drive letter (e.g. D:\).")
     args = parser.parse_args()
 
     log_format = "%(asctime)s:%(levelname)s:%(name)s.%(funcName)s: %(message)s"
@@ -191,34 +184,41 @@ def main():
     )
 
     logging.debug("Args: %s", args)
+    # FIXME: Make this work better (helper function in models?):
+    #        - Pull from environs (DB_URL and Separate Values)
+    #        - Pull from args (DB_URL and Separate Values)
     mmangler.models.prepare_db("mysql+pymysql://{}:{}@{}:{}/{}".format(
         args.db_user, args.db_pass, args.db_host, args.db_port, args.db_name
     ), echo=False)
 
-    tmp_path = Path(args.media_root)
-    logging.info("Media Root: %s", tmp_path)
+    tmp_path = Path(args.share_root)
+    logging.info("Server Share Root: %s", tmp_path)
 
-    if not args.media_id:
+    # FIXME: Should this logic be moved to the SharePoster class?
+    if not args.share_id:
         # POST the media to the server and get back a media_id
-        tmp_new_media = MediaPoster(media_path=tmp_path)
-        if args.mdiscv_type:
-            tmp_new_media.media_type = mmangler.models.MediaTypeEnum(args.mdiscv_type)
+        tmp_new_share = ServerSharePoster(share_path=tmp_path)
         if not args.dry:
-            tmp_new_media.post_to_db()
-        tmp_media_id = tmp_new_media.id
+            tmp_new_share.post_to_db()
+        tmp_share_id = tmp_new_share.id
     else:
-        tmp_media_id = args.media_id
+        tmp_share_id = args.share_id
 
     path_walker = PathWalker(tmp_path)
 
+    # FIXME: Will we get a performance increase from threading this?  This is generally going to be limited by the
+    #        server's disk and network.
     tmp_file_counter = 0
     tmp_total_file_count = len(path_walker.files_list)
     for item in path_walker.files_list:
         tmp_file_counter = tmp_file_counter + 1
         logging.info("File Number: %d of %d", tmp_file_counter, tmp_total_file_count)
-        tmp_file = FilePoster(item, tmp_media_id)
+        tmp_file = ServerFilePoster(item, tmp_share_id)
         if not args.dry:
             tmp_file.post_to_db()
+
+    # FIXME: Should there be a cleanup cycle here to remove files that haven't been seen in X number of days?
+    #        I.E. Remove old ServerShareFileAssociations to show the files aren't in the share anymore.
 
 if __name__ == '__main__':
     main()
