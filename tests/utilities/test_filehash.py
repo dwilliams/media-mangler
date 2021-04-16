@@ -40,3 +40,5 @@ class TestFileHash(TestCase):
         self.fs.create_dir(tmp_dir_path)
         with self.assertRaises(NotAFileException):
             file_hash = FileHash(tmp_dir_path)
+
+    # FIXME: Add a test for the stop_event

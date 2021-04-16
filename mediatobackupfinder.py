@@ -7,6 +7,7 @@
 import argparse
 import logging
 import os
+import sys
 
 import mmangler.models
 
@@ -23,6 +24,33 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 ### GLOBALS ###
 
 ### FUNCTIONS ###
+def get_share_by_name(db_session, share_name):
+    logging.debug("Searching for share with name: %s", share_name)
+    # Figure out which share we're wanting to work with
+    #tmp_session = mmangler.models.db_session()
+    tmp_db_share_result = None
+    try:
+        tmp_db_share_result = db_session.query(mmangler.models.ServerShareModel).filter_by(name = share_name).one()
+        logging.debug("Share Result: %s", tmp_db_share_result.__dict__)
+    except NoResultFound:
+        # if no share entry:
+        logging.error("Share doesn't exist: %s", share_name)
+    # finally:
+    #     tmp_session.close()
+    return tmp_db_share_result
+
+def get_files_by_share(db_session, share_obj):
+    logging.debug("Gathering file list for share: %s", share_obj.name)
+    #tmp_session = mmangler.models.db_session()
+    tmp_db_files_list = None
+    try:
+        tmp_db_files_list = db_session.query(mmangler.models.ServerShareFileAssociationModel).filter_by(
+            servershares_id = share_obj.id
+        ).all()
+    except NoResultFound:
+        # if no files in share:
+        logging.error("No files in share: %s", share_obj.name)
+    return tmp_db_files_list
 
 ### CLASSES ###
 class FileInfo:
@@ -90,51 +118,117 @@ def main():
     parser.add_argument("--db_name", default = "mediamangler", help = "Set the database name.")
     #parser.add_argument("--backup_count", type = int, default = 1, help = "The number of backups expected.")
     parser.add_argument("--exclude_dirs", help = "Comma separated string of directories to exclude from scan.")
-    parser.add_argument("--size_br_images", type = int, default = 0, help = "Size of Blu-ray images to pack (in GB).")
-    parser.add_argument("media_dir", help = "Path to the directory containing media to be scanned.")
+    parser.add_argument("--log_output_file", help = "File to output logging.")
+    parser.add_argument("--manifest_output_file", help = "File to output binning result.")
+    # FIXME: Should this be limited to 1 GB to 10000 GB (10 TB)?
+    #        https://stackoverflow.com/questions/25295487/python-argparse-value-range-help-message-appearance
+    parser.add_argument("--size_bins", type = int, default = 25, help = "Size of bins (e.g. Blu-ray images) to pack (in GB).")
+    # FIXME: Should this be using the ID?
+    parser.add_argument("share_name", help = "Name of the share that we want to check.")
     args = parser.parse_args()
 
     log_format = "%(asctime)s:%(levelname)s:%(name)s.%(funcName)s: %(message)s"
-    logging.basicConfig(
-        format=log_format,
-        level=(logging.DEBUG if args.verbose else logging.INFO)
-    )
+    log_root = logging.getLogger()
+    log_root.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    log_handler = None
+    if args.log_output_file:
+        log_handler = logging.FileHandler(args.log_output_file, 'w', 'utf-8')
+    else:
+        log_handler = logging.StreamHandler(sys.stdout)
+    log_handler.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+    log_handler.setFormatter(logging.Formatter(log_format))
+    log_root.addHandler(log_handler)
 
     logging.debug("Args: %s", args)
     mmangler.models.prepare_db("mysql+pymysql://{}:{}@{}:{}/{}".format(
         args.db_user, args.db_pass, args.db_host, args.db_port, args.db_name
     ), echo = False)
 
-    tmp_path = os.path.abspath(args.media_dir)
-    logging.info("Media Directory: %s", tmp_path)
+    # tmp_path = os.path.abspath(args.media_dir)
+    # logging.info("Media Directory: %s", tmp_path)
 
-    path_walker = PathWalker(tmp_path, args.exclude_dirs.split(',') if args.exclude_dirs else [])
+    tmp_db_session = mmangler.models.db_session()
 
-    to_pack_br = {}
+    # Figure out which share we're wanting to work with
+    tmp_share = get_share_by_name(tmp_db_session, args.share_name)
 
-    # Check to see if the file has backups and track which files don't have a BR backup
-    tmp_file_counter = 0
-    for item in path_walker.files_list:
-        tmp_file_counter = tmp_file_counter + 1
-        logging.info("File Number: %d of %d", tmp_file_counter, len(path_walker.files_list))
-        #FileChecker(file_path = item, backup_count = args.backup_count)
-        tmp_filechecker = FileChecker(item)
-        if not tmp_filechecker.has_backup_br:
-            to_pack_br[item] = tmp_filechecker.file_info.size_bytes
+    # Get the list of files on the share
+    #path_walker = PathWalker(tmp_path, args.exclude_dirs.split(',') if args.exclude_dirs else [])
+    tmp_files_list = get_files_by_share(tmp_db_session, tmp_share)
 
+    # Setup the bin packer
+    tmp_packer = BinPacker(args.size_bins * 1000 * 1000 * 1000) # Using 1000 instead of 1024 for each size conversion
 
-    if args.size_br_images > 0:
-        # Pack the files into bins
-        tmp_packer = BinPacker(args.size_br_images * 1000 * 1000 * 1000) # Using 1000 instead of 1024 for each size conversion
-        for item in to_pack_br:
-            tmp_packer.add_item(item, to_pack_br[item])
-        tmp_packer.pack_naive()
+    # Check each file if it has a backup of type BR (if BR size is specified) or HDD
+    for item_file in tmp_files_list:
+        logging.debug("File data: %s", item_file.__dict__)
 
-        # Print the bins
+        # FIXME: Exclude subdirectories of shares here
+        #        Hacking a quick ignore for paths starting with '[SORT]'
+        if "[SORT]" in item_file.file_path:
+            continue
+
+        tmp_mfa_list = item_file.file.medias
+        logging.debug("MFA List: (%d) %s", len(tmp_mfa_list), tmp_mfa_list)
+        #    if less than backup number argument, log "<file> has # backups on <types>"
+        #    if greater than or equal to backup number argument, do nothing
+        #self.current_backup_count = len(tmp_mfa_list)
+        # if self.current_backup_count < self.backup_count:
+        #     self.logger.info("File %s has %d backups:", self.path, self.current_backup_count)
+        #     for item in tmp_mfa_list:
+        #         self.logger.info("  Type: %-4s   Name: %s", item.media.media_type, item.media.name)
+        has_backup_br = False
+        has_backup_hdd = False
+        for item_mfa in tmp_mfa_list:
+            logging.debug("  Type: %-4s   Name: %s", item_mfa.media.media_type, item_mfa.media.name)
+            if item_mfa.media.media_type == mmangler.models.MediaTypeEnum.BR:
+                has_backup_br = True
+            elif item_mfa.media.media_type == mmangler.models.MediaTypeEnum.HDD:
+                has_backup_hdd = True
+        # If less or equal to than 100 GB, assume BR backup type, otherwise assume HDD type
+        if (args.size_bins < 101 and not has_backup_br) or (args.size_bins > 100 and not has_backup_hdd):
+            tmp_packer.add_item("{}/{}".format(item_file.file_path, item_file.file_name), item_file.file.size_bytes)
+
+    # Pack the bins and print
+    tmp_packer.pack_naive()
+    if args.manifest_output_file:
+        with open(Path(args.manifest_output_file), 'w', encoding = "utf-8") as filehandle:
+            filehandle.write("Number of Bins: {:,}\n".format(len(tmp_packer.bins)))
+            for tmp_bin in tmp_packer.bins:
+                filehandle.write("\nBin ------------ Size: {:,} ( {:,} free )\n".format( tmp_bin.bin_size, tmp_bin.bin_free))
+                for item in sorted(tmp_bin.bin_items, key = lambda x: x.item_key):
+                    filehandle.write("   {} ( {:,} )\n".format(item.item_key, item.item_size))
+    else:
         for tmp_bin in tmp_packer.bins:
             logging.info("Bin ------------ %s ( %d free )", str(tmp_bin), tmp_bin.bin_free)
             for item in tmp_bin.bin_items:
                 logging.info("  %s", str(item))
+
+    # Check to see if the file has backups and track which files don't have a BR backup
+    # tmp_file_counter = 0
+    # for item in path_walker.files_list:
+    #     tmp_file_counter = tmp_file_counter + 1
+    #     logging.info("File Number: %d of %d", tmp_file_counter, len(path_walker.files_list))
+    #     #FileChecker(file_path = item, backup_count = args.backup_count)
+    #     tmp_filechecker = FileChecker(item)
+    #     if not tmp_filechecker.has_backup_br:
+    #         to_pack_br[item] = tmp_filechecker.file_info.size_bytes
+
+
+    # if args.size_br_images > 0:
+    #     # Pack the files into bins
+    #     tmp_packer = BinPacker(args.size_br_images * 1000 * 1000 * 1000) # Using 1000 instead of 1024 for each size conversion
+    #     for item in to_pack_br:
+    #         tmp_packer.add_item(item, to_pack_br[item])
+    #     tmp_packer.pack_naive()
+    #
+    #     # Print the bins
+    #     for tmp_bin in tmp_packer.bins:
+    #         logging.info("Bin ------------ %s ( %d free )", str(tmp_bin), tmp_bin.bin_free)
+    #         for item in tmp_bin.bin_items:
+    #             logging.info("  %s", str(item))
+
+    tmp_db_session.close()
 
 if __name__ == '__main__':
     main()

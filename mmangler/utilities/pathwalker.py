@@ -3,12 +3,14 @@
 ### IMPORTS ###
 import logging
 import os
+import threading
 
 ### GLOBALS ###
 
 ### FUNCTIONS ###
 
 ### CLASSES ###
+
 class PathWalker:
     _filename_ignore = [
         'WPSettings.dat',
@@ -17,12 +19,13 @@ class PathWalker:
         'Thumbs.db'
     ]
 
-    def __init__(self, root_path, exclude_dirs = [], display_counts = True):
+    def __init__(self, root_path, exclude_dirs = [], display_counts = True, stop_event = threading.Event()):
         self.logger = logging.getLogger(type(self).__name__)
         # FIXME: Update to use pathlib.Path
         self.root_path = root_path
         self.exclude_dirs = exclude_dirs
         self.display_counts = display_counts
+        self._stop_event = stop_event # Needed to allow threads to end early on CTRL+C
         self._files_list = [] # List of dictionaries with 'dirpath' and 'filename' keys
         # ...
         self._walk_path()
@@ -41,6 +44,10 @@ class PathWalker:
     def _walk_path(self):
         self.logger.debug("Walking Path: %s", self.root_path)
         for root, dirs, files in os.walk(self.root_path, topdown = True):
+            # Breaking out early if stop_event is triggered
+            if self._stop_event.is_set():
+                self.logger.warning("Stopping Early")
+                break
             # NOTES: makes sure to check each directory for an exclude as a full path or as a directory name
             # if d not in self.exclude_dirs or if os.path.join(root, d) not in self.exclude_dirs
             # dirs[:] = [d for d in dirs if d not in self.exclude_dirs]
@@ -50,6 +57,10 @@ class PathWalker:
             #        - absolute paths (should this be checked to be under the root_path
             #        Might be a good idea to brute force the scan instead of relying on os.walk
             for directory in list(dirs): # Wrapped in list() to make a new list so to not modify the for loop's list
+                # Breaking out early if stop_event is triggered
+                if self._stop_event.is_set():
+                    self.logger.warning("Stopping Early")
+                    break
                 self.logger.debug("Checking directory '%s' against list '%s'", directory, self.exclude_dirs)
                 self.logger.debug("Checking directory '%s' against list '%s'", os.path.join(root, directory), self.exclude_dirs)
                 if directory in self.exclude_dirs:
@@ -58,6 +69,10 @@ class PathWalker:
                     dirs.remove(directory)
 
             for filename in files:
+                # Breaking out early if stop_event is triggered
+                if self._stop_event.is_set():
+                    self.logger.warning("Stopping Early")
+                    break
                 if filename not in self._filename_ignore:
                     #self.files_list.append(os.path.join(root, filename))
                     self._files_list.append({'dirpath': root, 'filename': filename})

@@ -38,3 +38,5 @@ class TestPathWalker(TestCase):
         path_walker = PathWalker('/walk')
         self.assertEqual(len(path_walker.files_list), 6)
         self.assertEqual(len(path_walker.files_list_dicts), 6)
+
+    # FIXME: Add a test for the stop_event
