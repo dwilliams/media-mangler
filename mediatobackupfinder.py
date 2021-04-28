@@ -181,12 +181,14 @@ def main():
         has_backup_hdd = False
         for item_mfa in tmp_mfa_list:
             logging.debug("  Type: %-4s   Name: %s", item_mfa.media.media_type, item_mfa.media.name)
-            if item_mfa.media.media_type == mmangler.models.MediaTypeEnum.BR:
+            if item_mfa.media.media_type == mmangler.models.MediaTypeEnum.BR.value:
                 has_backup_br = True
-            elif item_mfa.media.media_type == mmangler.models.MediaTypeEnum.HDD:
+            elif item_mfa.media.media_type == mmangler.models.MediaTypeEnum.HDD.value:
                 has_backup_hdd = True
         # If less or equal to than 100 GB, assume BR backup type, otherwise assume HDD type
+        logging.debug("has_backup_br: %s, has_backup_hdd: %s", has_backup_br, has_backup_hdd)
         if (args.size_bins < 101 and not has_backup_br) or (args.size_bins > 100 and not has_backup_hdd):
+            logging.debug("Adding item to packer")
             tmp_packer.add_item("{}/{}".format(item_file.file_path, item_file.file_name), item_file.file.size_bytes)
 
     # Pack the bins and print

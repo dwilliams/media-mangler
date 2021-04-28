@@ -40,11 +40,22 @@ class MediaDiscover:
         tmp_disk_parts = psutil.disk_partitions()
         self.logger.debug("Checking partitions for path: %s", str(self.path))
         self.logger.debug("tmp_disk_parts: %s", tmp_disk_parts)
-        for x in tmp_disk_parts:
-            self.logger.debug("Path: %s (%s)", Path(x.device), x.device)
-            self.logger.debug("Match: %s", Path(x.device).resolve() == self.path.resolve())
+        for item in tmp_disk_parts:
+            self.logger.debug("Path: %s (%s)", Path(item.device), item.device)
+            try:
+                self.logger.debug("Match: %s", Path(item.device).resolve() == self.path.resolve())
+            except PermissionError:
+                pass # Path(x.device).resolve() does weird things on a CD device without a disk
         # FIXME: Should this be fixed to support network shares?
-        tmp_disk_part = next(x for x in tmp_disk_parts if Path(x.device).resolve() == self.path.resolve())
+        #tmp_disk_part = next(x for x in tmp_disk_parts if Path(x.device).resolve() == self.path.resolve())
+        tmp_disk_part = None
+        for item in tmp_disk_parts:
+            try:
+                if Path(item.device).resolve() == self.path.resolve():
+                    self.logger.debug("Found match: %s", str(item))
+                    tmp_disk_part = item
+            except PermissionError:
+                pass
         if tmp_disk_part.fstype in ["NTFS", "FAT", "FAT32"]:
             self.type = MediaTypeEnum.HDD
         elif (tmp_disk_part.fstype in ["CDFS"]) or ("cdrom" in tmp_disk_part.opts):
