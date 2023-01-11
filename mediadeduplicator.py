@@ -27,7 +27,7 @@ FILE_HASH_LISTS = {}
 def main():
     parser = argparse.ArgumentParser(description="Scan and hash files on media, then push into the database.")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("--dry", help="Dry run, don't delete files.", action="store_true")
+    parser.add_argument("--dry_run", help="Dry run, don't delete files.", action="store_true")
     parser.add_argument("--delete_from", help = "Directory from which duplicates will be deleted.")
     parser.add_argument("--exclude_dirs", help = "Comma separated string of directories to exclude from scan.")
     parser.add_argument("--output_file", help = "File to output logging.")
@@ -46,17 +46,6 @@ def main():
     log_handler.setFormatter(logging.Formatter(log_format))
     log_root.addHandler(log_handler)
 
-    # if args.output_file:
-    #     logging.basicConfig(
-    #         format = log_format,
-    #         level = (logging.DEBUG if args.verbose else logging.INFO),
-    #         filename = args.output_file
-    #     )
-    # else:
-    #     logging.basicConfig(
-    #         format = log_format,
-    #         level = (logging.DEBUG if args.verbose else logging.INFO)
-    #     )
     logging.debug("Args: %s", args)
 
     logging.info("Media Root: %s", os.path.abspath(args.media_root))
@@ -81,6 +70,8 @@ def main():
         except Exception as ex:
             logging.warning("FileHash failed: %s", ex)
 
+# FIXME: Print the number of duplicates
+
     # Search through hash lists for lists with more than one hash
     # FIXME: Should the delete_safe path be referenced to the root_path?
     tmp_delete_safe_path = Path(args.delete_from) if args.delete_from else None
@@ -92,16 +83,16 @@ def main():
             logging.info("   Count: %d", len(FILE_HASH_LISTS[item]))
             tmp_files_deleted = 0
             for file_hash in FILE_HASH_LISTS[item]:
-                logging.info("   File: %s", file_hash.file_path)
+                logging.info("   File: %s", file_hash.path)
                 # If not deleting all of them and matches delete safe path
-                if (tmp_files_deleted < (len(FILE_HASH_LISTS[item]) - 1)) and tmp_delete_safe_path in file_hash.file_path.parents:
+                if (tmp_files_deleted < (len(FILE_HASH_LISTS[item]) - 1)) and tmp_delete_safe_path in file_hash.path.parents:
                     tmp_files_deleted = tmp_files_deleted + 1
-                    if args.dry:
-                        logging.info("DRY RUN: NOT Deleting file: %s", file_hash.file_path)
+                    if args.dry_run:
+                        logging.info("DRY RUN: NOT Deleting file: %s", file_hash.path)
                     else:
-                        logging.info("Deleted file: %s", file_hash.file_path)
+                        logging.info("Deleted file: %s", file_hash.path)
                         try:
-                            file_hash.file_path.unlink()
+                            file_hash.path.unlink()
                         except Exception as ex:
                             logging.warning("Error deleting file: %s", ex)
                     # Should add a check here to remove empty directories.

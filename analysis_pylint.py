@@ -9,8 +9,8 @@ def get_result_value(result_string):
     tmp_res_list = result_string.rstrip().split('\n')
     for item in tmp_res_list:
         if 'Your code has been rated at' in item:
-            tmp_score = float(item.split()[6].split('/')[0])
-            return tmp_score
+            tmp_result = float(item.split()[6].split('/')[0])
+            return tmp_result
     return None
 
 # Get a list of all python files in the project
@@ -34,7 +34,7 @@ for mod in MODULES:
     ERRORS.append(stderr)
 
 # Generate a report to save in the project, keeping track of scores
-print('Generating report...')
+print('\n--- Generating report ---')
 REPORT = ''
 SCORES = []
 for mod in RESULTS:

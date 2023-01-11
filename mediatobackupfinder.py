@@ -6,18 +6,18 @@
 ### IMPORTS ###
 import argparse
 import logging
-import os
+#import os
 import sys
 
 import mmangler.models
 
 from pathlib import Path
 
-from mmangler.utilities.pathwalker import PathWalker
-from mmangler.utilities.filehash import FileHash
+#from mmangler.utilities.pathwalker import PathWalker
+#from mmangler.utilities.filehash import FileHash
 from mmangler.utilities.binpacker import BinPacker
 
-from mmangler.exceptions import ConflictException, MultipleResultsException, ServerErrorException
+#from mmangler.exceptions import ConflictException, MultipleResultsException, ServerErrorException
 
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
@@ -53,59 +53,59 @@ def get_files_by_share(db_session, share_obj):
     return tmp_db_files_list
 
 ### CLASSES ###
-class FileInfo:
-    def __init__(self, file_path):
-        self.logger = logging.getLogger(type(self).__name__)
-        self.path = Path(file_path)
-        self.name = os.path.splitext(os.path.basename(self.path))[0]
-        self.size_bytes = os.stat(self.path).st_size
-        self._filehash = FileHash(self.path)
+# class FileInfo:
+#     def __init__(self, file_path):
+#         self.logger = logging.getLogger(type(self).__name__)
+#         self.path = Path(file_path)
+#         self.name = os.path.splitext(os.path.basename(self.path))[0]
+#         self.size_bytes = os.stat(self.path).st_size
+#         self._filehash = FileHash(self.path)
 
-class FileChecker:
-    #def __init__(self, file_path, backup_count = 1):
-    def __init__(self, file_path):
-        self.logger = logging.getLogger(type(self).__name__)
-        self.path = Path(file_path)
-        #self.backup_count = backup_count
-        self.current_backup_count = 0
-        self.has_backup_br = False
-        self.has_backup_hdd = False
-        # ...
-        self.file_info = FileInfo(self.path)
-        self._checkfile()
-
-    def _checkfile(self):
-        tmp_session = mmangler.models.db_session()
-        try:
-            # Check to see if file exists in files table
-            tmp_db_file_result = tmp_session.query(mmangler.models.FileModel).filter_by(hash_sha512_hex = self.file_info._filehash.hash_sha512_hex).one()
-            self.logger.debug("File Result: %s", tmp_db_file_result.__dict__)
-            if tmp_db_file_result.hash_md5_hex == self.file_info._filehash.hash_md5_hex and tmp_db_file_result.size_bytes == self.file_info.size_bytes:
-                # if file entry:
-                #    count the number of entries for file in associations table
-                #    # https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
-                tmp_mfa_list = tmp_session.query(mmangler.models.MediaFileAssociationModel).filter_by(files_id = tmp_db_file_result.id).all()
-                self.logger.debug("MFA List: (%d) %s", len(tmp_mfa_list), tmp_mfa_list)
-                #    if less than backup number argument, log "<file> has # backups on <types>"
-                #    if greater than or equal to backup number argument, do nothing
-                self.current_backup_count = len(tmp_mfa_list)
-                # if self.current_backup_count < self.backup_count:
-                #     self.logger.info("File %s has %d backups:", self.path, self.current_backup_count)
-                #     for item in tmp_mfa_list:
-                #         self.logger.info("  Type: %-4s   Name: %s", item.media.media_type, item.media.name)
-                for item in tmp_mfa_list:
-                    self.logger.debug("  Type: %-4s   Name: %s", item.media.media_type, item.media.name)
-                    if item.media.media_type == mmangler.models.MediaTypeEnum.BR:
-                        self.has_backup_br = True
-                    elif item.media.media_type == mmangler.models.MediaTypeEnum.HDD:
-                        self.has_backup_hdd = True
-            else:
-                self.logger.warning("HASH COLLISION\n  Path: %s\n  Hash (SHA512): %s", self.path, self.file_info._filehash.hash_sha512_hex)
-        except NoResultFound:
-            # if no file entry, log "<file> has 0 backups"
-            self.logger.info("File %s has 0 backups", self.path)
-        finally:
-            tmp_session.close()
+# class FileChecker:
+#     #def __init__(self, file_path, backup_count = 1):
+#     def __init__(self, file_path):
+#         self.logger = logging.getLogger(type(self).__name__)
+#         self.path = Path(file_path)
+#         #self.backup_count = backup_count
+#         self.current_backup_count = 0
+#         self.has_backup_br = False
+#         self.has_backup_hdd = False
+#         # ...
+#         self.file_info = FileInfo(self.path)
+#         self._checkfile()
+#
+#     def _checkfile(self):
+#         tmp_session = mmangler.models.db_session()
+#         try:
+#             # Check to see if file exists in files table
+#             tmp_db_file_result = tmp_session.query(mmangler.models.FileModel).filter_by(hash_sha512_hex = self.file_info._filehash.hash_sha512_hex).one()
+#             self.logger.debug("File Result: %s", tmp_db_file_result.__dict__)
+#             if tmp_db_file_result.hash_md5_hex == self.file_info._filehash.hash_md5_hex and tmp_db_file_result.size_bytes == self.file_info.size_bytes:
+#                 # if file entry:
+#                 #    count the number of entries for file in associations table
+#                 #    # https://stackoverflow.com/questions/14754994/why-is-sqlalchemy-count-much-slower-than-the-raw-query
+#                 tmp_mfa_list = tmp_session.query(mmangler.models.MediaFileAssociationModel).filter_by(files_id = tmp_db_file_result.id).all()
+#                 self.logger.debug("MFA List: (%d) %s", len(tmp_mfa_list), tmp_mfa_list)
+#                 #    if less than backup number argument, log "<file> has # backups on <types>"
+#                 #    if greater than or equal to backup number argument, do nothing
+#                 self.current_backup_count = len(tmp_mfa_list)
+#                 # if self.current_backup_count < self.backup_count:
+#                 #     self.logger.info("File %s has %d backups:", self.path, self.current_backup_count)
+#                 #     for item in tmp_mfa_list:
+#                 #         self.logger.info("  Type: %-4s   Name: %s", item.media.media_type, item.media.name)
+#                 for item in tmp_mfa_list:
+#                     self.logger.debug("  Type: %-4s   Name: %s", item.media.media_type, item.media.name)
+#                     if item.media.media_type == mmangler.models.MediaTypeEnum.BR:
+#                         self.has_backup_br = True
+#                     elif item.media.media_type == mmangler.models.MediaTypeEnum.HDD:
+#                         self.has_backup_hdd = True
+#             else:
+#                 self.logger.warning("HASH COLLISION\n  Path: %s\n  Hash (SHA512): %s", self.path, self.file_info._filehash.hash_sha512_hex)
+#         except NoResultFound:
+#             # if no file entry, log "<file> has 0 backups"
+#             self.logger.info("File %s has 0 backups", self.path)
+#         finally:
+#             tmp_session.close()
 
 ### MAIN ###
 def main():
@@ -144,16 +144,12 @@ def main():
         args.db_user, args.db_pass, args.db_host, args.db_port, args.db_name
     ), echo = False)
 
-    # tmp_path = os.path.abspath(args.media_dir)
-    # logging.info("Media Directory: %s", tmp_path)
-
     tmp_db_session = mmangler.models.db_session()
 
     # Figure out which share we're wanting to work with
     tmp_share = get_share_by_name(tmp_db_session, args.share_name)
 
     # Get the list of files on the share
-    #path_walker = PathWalker(tmp_path, args.exclude_dirs.split(',') if args.exclude_dirs else [])
     tmp_files_list = get_files_by_share(tmp_db_session, tmp_share)
 
     # Setup the bin packer
@@ -205,30 +201,6 @@ def main():
             logging.info("Bin ------------ %s ( %d free )", str(tmp_bin), tmp_bin.bin_free)
             for item in tmp_bin.bin_items:
                 logging.info("  %s", str(item))
-
-    # Check to see if the file has backups and track which files don't have a BR backup
-    # tmp_file_counter = 0
-    # for item in path_walker.files_list:
-    #     tmp_file_counter = tmp_file_counter + 1
-    #     logging.info("File Number: %d of %d", tmp_file_counter, len(path_walker.files_list))
-    #     #FileChecker(file_path = item, backup_count = args.backup_count)
-    #     tmp_filechecker = FileChecker(item)
-    #     if not tmp_filechecker.has_backup_br:
-    #         to_pack_br[item] = tmp_filechecker.file_info.size_bytes
-
-
-    # if args.size_br_images > 0:
-    #     # Pack the files into bins
-    #     tmp_packer = BinPacker(args.size_br_images * 1000 * 1000 * 1000) # Using 1000 instead of 1024 for each size conversion
-    #     for item in to_pack_br:
-    #         tmp_packer.add_item(item, to_pack_br[item])
-    #     tmp_packer.pack_naive()
-    #
-    #     # Print the bins
-    #     for tmp_bin in tmp_packer.bins:
-    #         logging.info("Bin ------------ %s ( %d free )", str(tmp_bin), tmp_bin.bin_free)
-    #         for item in tmp_bin.bin_items:
-    #             logging.info("  %s", str(item))
 
     tmp_db_session.close()
 
